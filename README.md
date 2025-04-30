@@ -9,6 +9,7 @@ A lightweight TypeScript service built with **Hono** for Cloudflare Workers that
 - **Session state** stored in memory – one history per user (per Worker instance).
 - **Real-time streaming** – incremental `response.tts` chunks delivered via SSE.
 - **Google Gemini SDK** integration (`@ai-sdk/google`).
+- **SSE streaming powered by [`@layercode/node-server-sdk`](https://www.npmjs.com/package/@layercode/node-server-sdk`)** – abstracts away manual SSE handling for robust, simple streaming.
 - **Graceful fall-backs** – friendly responses on errors.
 - **Modern stack** – Hono, HTMX, Tailwind, DaisyUI, Cloudflare Workers.
 
@@ -60,6 +61,8 @@ Send the user's text and receive streamed chunks.
 
 #### Streaming Response (SSE)
 
+All streaming and SSE response handling is managed by [`@layercode/node-server-sdk`](https://www.npmjs.com/package/@layercode/node-server-sdk), which provides a simple interface for sending TTS and data chunks to the client, abstracting away manual SSE logic.
+
 ```
 data: {"type":"response.tts","content":"Hi there!","turn_id":"turn-0001"}
 
@@ -90,6 +93,7 @@ data: {"type":"response.end","turn_id":"turn-0001"}
 - `@ai-sdk/google` – Gemini SDK
 - `ai` – streaming and message handling
 - `@hono/zod-validator` / `zod` – request validation
+- `@layercode/node-server-sdk` – abstracts SSE streaming and response handling
 - `wrangler` – Cloudflare Workers CLI
 
 All pinned in `package.json`.

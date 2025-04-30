@@ -1,17 +1,13 @@
-import { streamSSE } from "hono/streaming";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { streamText, CoreMessage } from "ai";
+import { CoreMessage, streamText } from "ai";
 import { createFactory } from "hono/factory";
 import { env } from "cloudflare:workers";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
+import { streamResponse } from "@layercode/node-server-sdk";
 
 export const factory = createFactory();
-
-type MessageContent = { type: "text"; text: string };
-type Message = { role: "user" | "assistant"; content: MessageContent[] };
-
-const sessionMessages: Record<string, Message[]> = {};
+const sessionMessages = {} as Record<string, CoreMessage[]>;
 
 const SYSTEM_PROMPT = `You are a helpful conversation assistant. You should respond to the user's message in a conversational manner. Your output will be spoken by a TTS model. You should respond in a way that is easy for the TTS model to speak and sound natural.`;
 const WELCOME_MESSAGE = "Welcome to Layercode. How can I help you today?";
@@ -36,23 +32,15 @@ export const onRequestPost = factory.createHandlers(
     // Add user message
     messages.push({ role: "user", content: [{ type: "text", text }] });
 
+    const requestBody = { text, type, session_id, turn_id };
     if (type === "session.start") {
-      return streamSSE(c, async (stream) => {
-        await stream.writeSSE({
-          data: JSON.stringify({
-            type: "response.tts",
-            content: WELCOME_MESSAGE,
-            turn_id,
-          }),
-        });
+      return streamResponse(requestBody, async ({ stream }) => {
+        stream.tts(WELCOME_MESSAGE);
         messages.push({
           role: "assistant",
           content: [{ type: "text", text: WELCOME_MESSAGE }],
         });
-        sessionMessages[session_id] = messages;
-        await stream.writeSSE({
-          data: JSON.stringify({ type: "response.end", turn_id }),
-        });
+        stream.end();
       });
     }
 
@@ -60,49 +48,29 @@ export const onRequestPost = factory.createHandlers(
       apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
     });
 
-    return streamSSE(c, async (stream) => {
-      const { textStream, response } = streamText({
+    return streamResponse(requestBody, async ({ stream }) => {
+      const { textStream } = streamText({
         model: google("gemini-2.0-flash-001"),
         system: SYSTEM_PROMPT,
         messages,
         onFinish: async ({ response }) => {
-          for (const msg of response.messages) {
-            if (msg.role === "assistant") {
-              // Normalize content to array of { type: "text", text: ... }
-              let contentArr: { type: "text"; text: string }[] = [];
-              if (typeof msg.content === "string") {
-                contentArr = [{ type: "text", text: msg.content }];
-              } else if (Array.isArray(msg.content)) {
-                contentArr = msg.content.map((c: any) =>
-                  typeof c === "string" ? { type: "text", text: c } : c
-                );
-              }
-              messages.push({
-                role: "assistant",
-                content: contentArr,
-              });
-            }
-          }
+          // After the response has been generated and streamed, finally save it to the message list for this session
+          messages.push(...response.messages);
+          console.log(
+            "Current message history for session",
+            session_id,
+            JSON.stringify(messages, null, 2)
+          );
           sessionMessages[session_id] = messages;
-          await stream.writeSSE({
-            data: JSON.stringify({ type: "response.end", turn_id }),
-          });
+          stream.end(); // We must call stream.end() here to tell Layercode that the assistant's response has finished
         },
       });
-      await stream.writeSSE({
-        data: JSON.stringify({
-          textToBeShown: "Hello, how can I help you today?",
-        }),
+      // At any time, you can also return json objects, which will be forwarded directly to the client. Use this to create dynamic UI that is synchnised with the voice response.
+      stream.data({
+        textToBeShown: "Hello, how can I help you today?",
       });
-      for await (const chunk of textStream) {
-        await stream.writeSSE({
-          data: JSON.stringify({
-            type: "response.tts",
-            content: chunk,
-            turn_id,
-          }),
-        });
-      }
+      // Here we return the textStream chunks as SSE messages to Layercode, to be spoken to the user
+      await stream.ttsTextStream(textStream);
     });
   }
 );
