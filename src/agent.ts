@@ -4,7 +4,7 @@ import { createFactory } from "hono/factory";
 import { env } from "cloudflare:workers";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { streamResponse } from "@layercode/node-server-sdk";
+import { verifySignature, streamResponse } from "@layercode/node-server-sdk";
 
 export const factory = createFactory();
 const sessionMessages = {} as Record<string, CoreMessage[]>;
@@ -26,6 +26,21 @@ export const onRequestPost = factory.createHandlers(
     if (!env.GOOGLE_GENERATIVE_AI_API_KEY) {
       return c.json({ error: "GOOGLE_GENERATIVE_AI_API_KEY is not set" }, 500);
     }
+
+    const secret = env.LAYERCODE_WEBHOOK_SECRET;
+    if (!secret) {
+      return c.json({ error: "LAYERCODE_WEBHOOK_SECRET is not set" }, 500);
+    }
+
+    const rawBody = await c.req.text();
+    const signature = c.req.header("layercode-signature") || "";
+    const payload = JSON.stringify(rawBody);
+    const isValid = verifySignature({ payload, signature, secret });
+    if (!isValid) {
+      console.error("Invalid signature", signature, secret, rawBody);
+      return c.json({ error: "Invalid signature" }, 401);
+    }
+
     const { text, type, session_id, turn_id } = c.req.valid("json");
 
     let messages = sessionMessages[session_id] || [];

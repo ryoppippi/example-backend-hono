@@ -17,7 +17,7 @@ A lightweight TypeScript service built with **Hono** for Cloudflare Workers that
 
 ## 🚀 Quick Start
 
-> Requires **[Bun](https://bun.sh) 1.0+**, **Node.js 18+** (for Cloudflare Workers), and a valid **Gemini API key**.
+> Requires **[Bun](https://bun.sh) 1.0+**, **Node.js 18+** (for Cloudflare Workers), a valid **Gemini API key**, and a **Layercode webhook secret**.
 
 ```bash
 # Install dependencies
@@ -38,6 +38,7 @@ Add a `.dev.vars` file (or use `.dev.vars.example` as a template):
 
 ```env
 GOOGLE_GENERATIVE_AI_API_KEY=your_api_key_here
+LAYERCODE_WEBHOOK_SECRET=your_webhook_secret_here
 ```
 
 ---
@@ -74,6 +75,12 @@ data: {"type":"response.end","turn_id":"turn-0001"}
 | `response.tts` | A partial or complete chunk of text |
 | `response.end` | Indicates the turn has finished     |
 
+#### Implementation Notes
+
+- The `/agent` endpoint uses Cloudflare Workers' native streaming capabilities.
+- The route handler uses `@layercode/node-server-sdk` for SSE streaming and response handling.
+- Make sure you are running on **Node.js 18 or newer** for local development.
+
 ---
 
 ## 🧩 Project Structure
@@ -105,6 +112,7 @@ All pinned in `package.json`.
 | Symptom                                   | Fix                              |
 | ----------------------------------------- | -------------------------------- |
 | `GOOGLE_GENERATIVE_AI_API_KEY is not set` | Export var or add to `.dev.vars` |
+| `LAYERCODE_WEBHOOK_SECRET is not set`     | Export var or add to `.dev.vars` |
 | Empty or truncated response               | Check session consistency & logs |
 | Worker not responding                     | Check `wrangler` logs and config |
 
