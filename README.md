@@ -39,6 +39,7 @@ Add a `.dev.vars` file (or use `.dev.vars.example` as a template):
 ```env
 GOOGLE_GENERATIVE_AI_API_KEY=your_api_key_here
 LAYERCODE_WEBHOOK_SECRET=your_webhook_secret_here
+LAYERCODE_API_KEY=your_layercode_api_key_here
 ```
 
 ---
@@ -81,16 +82,21 @@ data: {"type":"response.end","turn_id":"turn-0001"}
 - The route handler uses `@layercode/node-server-sdk` for SSE streaming and response handling.
 - Make sure you are running on **Node.js 18 or newer** for local development.
 
+### POST `/authorize`
+
+It receives the frontend's request then, calls the Layercode authorization API using your secret API key, and finally returns the `client_session_key` (and optionally a `session_id`) to the frontend. This key is required for the frontend to establish a secure WebSocket connection to Layercode.
+
 ---
 
 ## 🧩 Project Structure
 
-| Path           | Purpose                           |
-| -------------- | --------------------------------- |
-| `src/agent.ts` | Service implementation            |
-| `src/index.ts` | Hono app entrypoint & routing     |
-| `.dev.vars`    | **Not committed** – local secrets |
-| `README.md`    | You are here                      |
+| Path               | Purpose                           |
+| ------------------ | --------------------------------- |
+| `src/agent.ts`     | Service implementation            |
+| `src/authorize.ts` | Service implementation            |
+| `src/index.ts`     | Hono app entrypoint & routing     |
+| `.dev.vars`        | **Not committed** – local secrets |
+| `README.md`        | You are here                      |
 
 ---
 
