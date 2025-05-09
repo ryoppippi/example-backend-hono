@@ -93,7 +93,7 @@ It receives the frontend's request then, calls the Layercode authorization API u
 | Path               | Purpose                           |
 | ------------------ | --------------------------------- |
 | `src/agent.ts`     | Service implementation            |
-| `src/authorize.ts` | Service implementation            |
+| `src/authorize.ts` | Session authorization             |
 | `src/index.ts`     | Hono app entrypoint & routing     |
 | `.dev.vars`        | **Not committed** – local secrets |
 | `README.md`        | You are here                      |
