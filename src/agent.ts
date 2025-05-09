@@ -21,8 +21,7 @@ export const onRequestPost = async (c: Context) => {
 
   const rawBody = await c.req.text();
   const signature = c.req.header('layercode-signature') || '';
-  const payload = JSON.stringify(rawBody);
-  const isValid = verifySignature({ payload, signature, secret });
+  const isValid = verifySignature({ payload: rawBody, signature, secret });
   if (!isValid) {
     console.error('Invalid signature', signature, secret, rawBody);
     return c.json({ error: 'Invalid signature' }, 401);
